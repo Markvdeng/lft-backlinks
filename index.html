@@ -332,12 +332,12 @@ function ensureProtocol(url) {
 
 // ── Fetch helpers ──
 async function fetchSummary(target) {
-  const r = await fetch(`${API_BASE}/summary?target=${encodeURIComponent(target)}`);
+  const r = await fetch(`${API_BASE}/summary?target=${target}`);
   if (!r.ok) throw new Error(`Summary API ${r.status}`);
   return r.json();
 }
 async function fetchBacklinks(target, limit = 1000) {
-  const r = await fetch(`${API_BASE}/backlinks?target=${encodeURIComponent(target)}&limit=${limit}`);
+  const r = await fetch(`${API_BASE}/backlinks?target=${target}&limit=${limit}`);
   if (!r.ok) throw new Error(`Backlinks API ${r.status}`);
   return r.json();
 }
