@@ -617,6 +617,7 @@ function renderGapTable() {
     ${sortableHeader('Link Power', 'linkPower', gapSortCol, gapSortDir, 'sortGap')}
     ${sortableHeader('DoFollow', 'isDofollow', gapSortCol, gapSortDir, 'sortGap')}
     <th>Anchor</th>
+    <th>Source URL</th>
     <th>Keywords</th>
   </tr></thead><tbody>`;
 
@@ -629,6 +630,7 @@ function renderGapTable() {
       <td style="font-weight:600;">${b.linkPower}</td>
       <td>${b.isDofollow ? '✓' : '—'}</td>
       <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(b.anchor)}">${esc(b.anchor)}</td>
+      <td style="max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><a href="${esc(b.url)}" target="_blank" style="color:#888;font-size:11px;">${esc(b.url)}</a></td>
       <td style="font-size:11px;color:#888;">${esc(b.relevanceReason)}</td>
     </tr>`;
   });
