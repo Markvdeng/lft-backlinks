@@ -257,9 +257,9 @@ tr:hover { background: #fafafa; }
     <h4>Relevance Score (0-100)</h4>
     Keyword matching against 87 football/ticket terms across domain, URL, anchor text, and page title. 4+ matches = 95, 3 = 85, 2 = 70, 1 = 55, 0 = 30. Negative keywords (crypto, casino, spam) = 5.
     <h4>Link Power Score (0-100)</h4>
-    Composite: DR component (40pts max) + log-scaled traffic (25pts max) + dofollow bonus (15pts) × relevance multiplier (0.2x–1.4x).
+    Composite: DR component (40pts max, DataForSEO 0-1000 scale) + log-scaled traffic (25pts max) + dofollow bonus (15pts) × relevance multiplier (0.2x–1.4x).
     <h4>Link Value Verdict</h4>
-    Strong Buy: LP ≥ 60 & Relevance ≥ 70. Fair: LP ≥ 35 or (DR ≥ 50 & Rel ≥ 40). Overpriced: LP ≥ 15. Avoid: LP < 15. Price analysis: < €8/pt = good, €8–15 = fair, > €15 = expensive.
+    Strong Buy: LP ≥ 60 & Relevance ≥ 70. Fair: LP ≥ 35 or (DR ≥ 500 & Rel ≥ 40). Overpriced: LP ≥ 15. Avoid: LP < 15. Price analysis: < €8/pt = good, €8–15 = fair, > €15 = expensive.
     <h4>Data Source</h4>
     DataForSEO Backlinks API (one link per domain, ordered by rank). Updated hourly (cached).
   </div>
@@ -319,7 +319,8 @@ function calculateLinkPower(dr, traffic, isDofollow, relevanceScore) {
   const trafficVal = parseFloat(traffic) || 0;
   let trafficScore = 0;
   if (trafficVal > 0) trafficScore = Math.min(25, (Math.log10(trafficVal + 1) / Math.log10(1000000)) * 25);
-  const drComponent = (drVal / 100) * 40;
+  // DataForSEO domain_from_rank is 0-1000 scale
+  const drComponent = (drVal / 1000) * 40;
   const dofollowBonus = isDofollow ? 15 : 0;
   const relMultiplier = 0.2 + (relevanceScore / 100) * 1.2;
   return Math.min(100, Math.round((drComponent + trafficScore + dofollowBonus) * relMultiplier));
@@ -396,7 +397,7 @@ async function runAssess() {
     // Verdict
     let verdict, verdictClass;
     if (linkPower >= 60 && rel.score >= 70) { verdict = 'Strong Buy'; verdictClass = 'strong-buy'; }
-    else if (linkPower >= 35 || (dr >= 50 && rel.score >= 40)) { verdict = 'Fair Price'; verdictClass = 'fair'; }
+    else if (linkPower >= 35 || (dr >= 500 && rel.score >= 40)) { verdict = 'Fair Price'; verdictClass = 'fair'; }
     else if (linkPower >= 15) { verdict = 'Overpriced'; verdictClass = 'overpriced'; }
     else { verdict = 'Avoid'; verdictClass = 'avoid'; }
 
@@ -541,11 +542,11 @@ function renderKPIs() {
 }
 
 function renderDRChart() {
-  const buckets = ['0-20', '20-40', '40-60', '60-80', '80-100'];
-  const ranges = [[0,20],[20,40],[40,60],[60,80],[80,100]];
+  const buckets = ['0-200', '200-400', '400-600', '600-800', '800-1000'];
+  const ranges = [[0,200],[200,400],[400,600],[600,800],[800,1000]];
   const d = comparisonData;
 
-  const count = (bl, lo, hi) => bl.filter(b => b.dr >= lo && b.dr < (hi === 100 ? 101 : hi)).length;
+  const count = (bl, lo, hi) => bl.filter(b => b.dr >= lo && b.dr < (hi === 1000 ? 1001 : hi)).length;
   const lftCounts = ranges.map(([lo,hi]) => count(d.lftBacklinks, lo, hi));
   const compCounts = ranges.map(([lo,hi]) => count(d.compBacklinks, lo, hi));
   const maxVal = Math.max(...lftCounts, ...compCounts, 1);
