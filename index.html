@@ -377,7 +377,7 @@ async function runAssess() {
   resultDiv.innerHTML = '<div class="loading-msg"><span class="spinner"></span> Fetching data from DataForSEO...</div>';
 
   try {
-    const target = ensureProtocol(domainInput).replace(/^https?:\/\//, '');
+    const target = domainInput.replace(/^https?:\/\//, '');
     const [summary, backlinks] = await Promise.all([
       fetchSummary(target),
       fetchBacklinks(target, 5),
@@ -465,8 +465,8 @@ async function runCompare() {
   document.getElementById('full-table').innerHTML = '';
 
   try {
-    const lftTarget = ensureProtocol(lftUrl).replace(/^https?:\/\//, '');
-    const compTarget = ensureProtocol(compUrl).replace(/^https?:\/\//, '');
+    const lftTarget = lftUrl.replace(/^https?:\/\//, '');
+    const compTarget = compUrl.replace(/^https?:\/\//, '');
 
     const [lftSummary, compSummary, lftBacklinksRaw, compBacklinksRaw] = await Promise.all([
       fetchSummary(lftTarget),
