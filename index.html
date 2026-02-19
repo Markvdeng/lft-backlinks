@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LFT Backlink Comparator</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Montserrat', sans-serif; background: #f5f5f5; color: #222; line-height: 1.5; }
+.container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+
+/* Header */
+header { background: #1a1a1a; color: #fff; padding: 24px 0; margin-bottom: 24px; }
+header .container { display: flex; align-items: center; justify-content: space-between; }
+header h1 { font-size: 22px; font-weight: 700; }
+header h1 span { color: #e60000; }
+header .subtitle { font-size: 13px; color: #888; }
+
+/* Cards */
+.card { background: #fff; border-radius: 10px; padding: 24px; margin-bottom: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+.card h2 { font-size: 17px; font-weight: 700; margin-bottom: 16px; color: #1a1a1a; }
+.card h3 { font-size: 15px; font-weight: 600; margin-bottom: 12px; }
+
+/* Forms */
+.form-row { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+.form-group { display: flex; flex-direction: column; gap: 4px; }
+.form-group label { font-size: 12px; font-weight: 600; color: #666; text-transform: uppercase; letter-spacing: 0.5px; }
+input[type="text"], input[type="number"] { font-family: 'Montserrat', sans-serif; font-size: 14px; padding: 10px 14px; border: 1.5px solid #ddd; border-radius: 6px; outline: none; transition: border-color .2s; }
+input:focus { border-color: #e60000; }
+button { font-family: 'Montserrat', sans-serif; font-size: 14px; font-weight: 600; padding: 10px 24px; border: none; border-radius: 6px; cursor: pointer; transition: all .2s; }
+.btn-primary { background: #e60000; color: #fff; }
+.btn-primary:hover { background: #c00; }
+.btn-primary:disabled { background: #ccc; cursor: not-allowed; }
+
+/* KPI Grid */
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.kpi { background: #f8f8f8; border-radius: 8px; padding: 16px; text-align: center; }
+.kpi .value { font-size: 26px; font-weight: 700; color: #1a1a1a; }
+.kpi .label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+.kpi.highlight .value { color: #e60000; }
+
+/* Verdict badges */
+.verdict { display: inline-block; padding: 6px 16px; border-radius: 20px; font-weight: 700; font-size: 14px; margin-top: 8px; }
+.verdict.strong-buy { background: #d4edda; color: #155724; }
+.verdict.fair { background: #fff3cd; color: #856404; }
+.verdict.overpriced { background: #ffe0cc; color: #a44a00; }
+.verdict.avoid { background: #f8d7da; color: #721c24; }
+
+/* Two-column comparison */
+.comparison-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: end; }
+.comparison-inputs .form-group { width: 100%; }
+.comparison-inputs input { width: 100%; }
+
+/* DR Distribution chart */
+.dr-chart { display: flex; gap: 16px; align-items: flex-end; height: 200px; margin: 16px 0; }
+.dr-bucket { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%; justify-content: flex-end; }
+.dr-bars { display: flex; gap: 4px; align-items: flex-end; width: 100%; justify-content: center; flex: 1; }
+.dr-bar { width: 24px; border-radius: 4px 4px 0 0; min-height: 2px; transition: height .5s; position: relative; }
+.dr-bar.lft { background: #e60000; }
+.dr-bar.comp { background: #2563eb; }
+.dr-bar-label { font-size: 10px; color: #666; margin-top: 4px; }
+.dr-bucket-label { font-size: 11px; font-weight: 600; color: #555; }
+.dr-legend { display: flex; gap: 20px; justify-content: center; margin-top: 8px; font-size: 12px; }
+.dr-legend span::before { content: ''; display: inline-block; width: 12px; height: 12px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+.dr-legend .l::before { background: #e60000; }
+.dr-legend .c::before { background: #2563eb; }
+
+/* Tables */
+.table-wrapper { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { background: #f0f0f0; font-weight: 600; text-align: left; padding: 10px 12px; cursor: pointer; white-space: nowrap; user-select: none; border-bottom: 2px solid #ddd; }
+th:hover { background: #e8e8e8; }
+th .sort-arrow { font-size: 10px; margin-left: 4px; }
+td { padding: 8px 12px; border-bottom: 1px solid #eee; }
+tr:hover { background: #fafafa; }
+.relevance-high { color: #155724; font-weight: 600; }
+.relevance-med { color: #856404; font-weight: 600; }
+.relevance-low { color: #721c24; font-weight: 600; }
+
+/* Tabs */
+.tabs { display: flex; gap: 0; margin-bottom: 0; }
+.tab { padding: 10px 20px; font-size: 13px; font-weight: 600; cursor: pointer; border: 1.5px solid #ddd; border-bottom: none; border-radius: 8px 8px 0 0; background: #f0f0f0; color: #666; }
+.tab.active { background: #fff; color: #1a1a1a; border-bottom-color: #fff; margin-bottom: -1px; z-index: 1; }
+.tab-content { border: 1.5px solid #ddd; border-radius: 0 8px 8px 8px; padding: 16px; background: #fff; }
+
+/* Filters */
+.filters { display: flex; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
+.filters input, .filters select { font-family: 'Montserrat', sans-serif; font-size: 12px; padding: 6px 10px; border: 1px solid #ddd; border-radius: 4px; }
+.filters label { font-size: 11px; font-weight: 600; color: #666; }
+.result-count { font-size: 12px; color: #888; }
+
+/* Loading */
+.spinner { display: inline-block; width: 20px; height: 20px; border: 3px solid #ddd; border-top-color: #e60000; border-radius: 50%; animation: spin .6s linear infinite; vertical-align: middle; margin-right: 8px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-msg { text-align: center; padding: 40px; color: #888; font-size: 14px; }
+
+/* Assessor result */
+.assess-result { margin-top: 16px; padding: 20px; background: #f8f8f8; border-radius: 8px; }
+.assess-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin-bottom: 12px; }
+.assess-item { text-align: center; }
+.assess-item .val { font-size: 22px; font-weight: 700; }
+.assess-item .lbl { font-size: 11px; color: #888; }
+
+/* Section labels */
+.section-label { font-size: 12px; font-weight: 600; color: #e60000; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+.side-label { font-size: 13px; font-weight: 600; color: #888; margin-bottom: 4px; }
+.side-label.lft { color: #e60000; }
+.side-label.comp { color: #2563eb; }
+
+/* Hidden */
+.hidden { display: none; }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .comparison-inputs { grid-template-columns: 1fr; }
+  .form-row { flex-direction: column; align-items: stretch; }
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .dr-chart { height: 150px; }
+}
+
+/* Methodology */
+.methodology { font-size: 12px; color: #888; line-height: 1.7; }
+.methodology h4 { font-size: 13px; color: #555; margin: 8px 0 4px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="container">
+    <div>
+      <h1><span>LFT</span> Backlink Comparator</h1>
+      <div class="subtitle">Link Value Assessment & Competitive Gap Analysis</div>
+    </div>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- LINK VALUE ASSESSOR -->
+  <div class="card">
+    <div class="section-label">Link Value Assessor</div>
+    <h2>Assess a Link Opportunity</h2>
+    <p style="font-size:13px;color:#666;margin-bottom:16px;">Enter a domain to evaluate its backlink value for LFT. Optionally add the price to get a value verdict.</p>
+    <div class="form-row">
+      <div class="form-group" style="flex:2;">
+        <label>Domain / URL</label>
+        <input type="text" id="assess-domain" placeholder="e.g. goal.com or bbc.com/sport">
+      </div>
+      <div class="form-group" style="flex:0.7;">
+        <label>Price (EUR, optional)</label>
+        <input type="number" id="assess-price" placeholder="e.g. 350" min="0">
+      </div>
+      <button class="btn-primary" id="assess-btn" onclick="runAssess()">Assess</button>
+    </div>
+    <div id="assess-result" class="hidden"></div>
+  </div>
+
+  <!-- PAGE COMPARISON TOOL -->
+  <div class="card">
+    <div class="section-label">Page Comparison Tool</div>
+    <h2>Compare Backlink Profiles</h2>
+    <p style="font-size:13px;color:#666;margin-bottom:16px;">Compare any two URLs to find link gaps and opportunities.</p>
+    <div class="comparison-inputs">
+      <div class="form-group">
+        <label class="side-label lft">LFT Page</label>
+        <input type="text" id="lft-url" value="livefootballtickets.com/world-cup-tickets.html">
+      </div>
+      <div class="form-group">
+        <label class="side-label comp">Competitor Page</label>
+        <input type="text" id="comp-url" value="seatpick.com/world-cup-tickets">
+      </div>
+    </div>
+    <div style="margin-top:16px;">
+      <button class="btn-primary" id="compare-btn" onclick="runCompare()">Compare</button>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="results" class="hidden">
+
+    <!-- Executive Summary -->
+    <div class="card">
+      <h2>Executive Summary</h2>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+        <div>
+          <div class="side-label lft">LFT</div>
+          <div class="kpi-grid" id="kpi-lft"></div>
+        </div>
+        <div>
+          <div class="side-label comp">Competitor</div>
+          <div class="kpi-grid" id="kpi-comp"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DR Distribution -->
+    <div class="card">
+      <h2>Domain Rating Distribution</h2>
+      <div class="dr-chart" id="dr-chart"></div>
+      <div class="dr-legend">
+        <span class="l">LFT</span>
+        <span class="c">Competitor</span>
+      </div>
+    </div>
+
+    <!-- Gap Analysis -->
+    <div class="card">
+      <h2>Gap Analysis — Competitor-Only Domains</h2>
+      <p style="font-size:12px;color:#888;margin-bottom:12px;">Domains linking to the competitor but not LFT — sorted by Link Power.</p>
+      <div class="filters">
+        <div><label>Search</label><br><input type="text" id="gap-filter-domain" placeholder="Filter domain..." oninput="renderGapTable()"></div>
+        <div><label>Min DR</label><br><input type="number" id="gap-filter-dr" placeholder="0" min="0" max="100" style="width:70px;" oninput="renderGapTable()"></div>
+        <div><label>Min Relevance</label><br><input type="number" id="gap-filter-rel" placeholder="0" min="0" max="100" style="width:70px;" oninput="renderGapTable()"></div>
+        <div><label>Type</label><br>
+          <select id="gap-filter-dofollow" onchange="renderGapTable()">
+            <option value="all">All</option>
+            <option value="dofollow">DoFollow only</option>
+            <option value="nofollow">NoFollow only</option>
+          </select>
+        </div>
+        <div class="result-count" id="gap-count"></div>
+      </div>
+      <div class="table-wrapper"><table id="gap-table"></table></div>
+    </div>
+
+    <!-- Shared Domains -->
+    <div class="card">
+      <h2>Shared Domains</h2>
+      <p style="font-size:12px;color:#888;margin-bottom:12px;">Domains linking to both pages.</p>
+      <div class="filters">
+        <div><label>Search</label><br><input type="text" id="shared-filter-domain" placeholder="Filter domain..." oninput="renderSharedTable()"></div>
+      </div>
+      <div class="table-wrapper"><table id="shared-table"></table></div>
+    </div>
+
+    <!-- Full Backlink Tables -->
+    <div class="card" style="padding-bottom:0;">
+      <h2>Full Backlink Profiles</h2>
+      <div class="tabs">
+        <div class="tab active" onclick="switchTab('lft')">LFT</div>
+        <div class="tab" onclick="switchTab('comp')">Competitor</div>
+      </div>
+      <div class="tab-content">
+        <div class="filters">
+          <div><label>Search</label><br><input type="text" id="full-filter-domain" placeholder="Filter domain..." oninput="renderFullTable()"></div>
+        </div>
+        <div class="table-wrapper"><table id="full-table"></table></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Methodology -->
+  <div class="card methodology">
+    <h2>Methodology</h2>
+    <h4>Relevance Score (0-100)</h4>
+    Keyword matching against 87 football/ticket terms across domain, URL, anchor text, and page title. 4+ matches = 95, 3 = 85, 2 = 70, 1 = 55, 0 = 30. Negative keywords (crypto, casino, spam) = 5.
+    <h4>Link Power Score (0-100)</h4>
+    Composite: DR component (40pts max) + log-scaled traffic (25pts max) + dofollow bonus (15pts) × relevance multiplier (0.2x–1.4x).
+    <h4>Link Value Verdict</h4>
+    Strong Buy: LP ≥ 60 & Relevance ≥ 70. Fair: LP ≥ 35 or (DR ≥ 50 & Rel ≥ 40). Overpriced: LP ≥ 15. Avoid: LP < 15. Price analysis: < €8/pt = good, €8–15 = fair, > €15 = expensive.
+    <h4>Data Source</h4>
+    DataForSEO Backlinks API (one link per domain, ordered by rank). Updated hourly (cached).
+  </div>
+
+</div>
+
+<script>
+const API_BASE = 'https://lft-backlinks-api.mark-abd.workers.dev';
+
+// ── Keywords ──
+const FOOTBALL_KEYWORDS = [
+  'football','soccer','premier league','champions league','europa league',
+  'world cup','fifa','uefa','ticket','tickets','stadium','match',
+  'fixture','goal','transfer','league','cup','derby','fan','supporter',
+  'arsenal','chelsea','liverpool','manchester united','man utd','man city',
+  'tottenham','spurs','barcelona','real madrid','bayern','juventus',
+  'psg','inter milan','ac milan','dortmund','atletico',
+  'serie a','la liga','bundesliga','ligue 1','eredivisie',
+  'epl','sport','sports','calcio','fussball','voetbal','futbol',
+  'hospitality','vip','seating','away day','matchday',
+  'wembley','anfield','old trafford','camp nou','bernabeu','san siro',
+  'euro 2024','euro 2028','nations league',
+];
+const NEGATIVE_KEYWORDS = [
+  'crypto','bitcoin','casino','poker','gambling','slot',
+  'pharmacy','viagra','diet pill','weight loss',
+  'seo service','link building','buy backlinks',
+  'adult','xxx','dating',
+];
+
+function extractDomain(url) {
+  try {
+    let u = url.replace(/^https?:\/\//, '').replace(/^www\./, '');
+    return u.split('/')[0].toLowerCase();
+  } catch { return url.toLowerCase(); }
+}
+
+function scoreRelevance(domain, url, anchor, title) {
+  const text = `${domain} ${url} ${anchor} ${title}`.toLowerCase();
+  for (const kw of NEGATIVE_KEYWORDS) {
+    if (text.includes(kw)) return { score: 5, reason: `negative: ${kw}` };
+  }
+  let score = 30;
+  const matches = [];
+  for (const kw of FOOTBALL_KEYWORDS) {
+    if (text.includes(kw)) matches.push(kw);
+  }
+  if (matches.length >= 4) score = 95;
+  else if (matches.length === 3) score = 85;
+  else if (matches.length === 2) score = 70;
+  else if (matches.length === 1) score = 55;
+  return { score: Math.min(100, score), reason: matches.length > 0 ? matches.slice(0, 3).join(', ') : 'no keywords' };
+}
+
+function calculateLinkPower(dr, traffic, isDofollow, relevanceScore) {
+  const drVal = parseFloat(dr) || 0;
+  const trafficVal = parseFloat(traffic) || 0;
+  let trafficScore = 0;
+  if (trafficVal > 0) trafficScore = Math.min(25, (Math.log10(trafficVal + 1) / Math.log10(1000000)) * 25);
+  const drComponent = (drVal / 100) * 40;
+  const dofollowBonus = isDofollow ? 15 : 0;
+  const relMultiplier = 0.2 + (relevanceScore / 100) * 1.2;
+  return Math.min(100, Math.round((drComponent + trafficScore + dofollowBonus) * relMultiplier));
+}
+
+function ensureProtocol(url) {
+  if (url.includes('/') && !url.startsWith('http')) return 'https://' + url;
+  return url;
+}
+
+// ── Fetch helpers ──
+async function fetchSummary(target) {
+  const r = await fetch(`${API_BASE}/summary?target=${encodeURIComponent(target)}`);
+  if (!r.ok) throw new Error(`Summary API ${r.status}`);
+  return r.json();
+}
+async function fetchBacklinks(target, limit = 1000) {
+  const r = await fetch(`${API_BASE}/backlinks?target=${encodeURIComponent(target)}&limit=${limit}`);
+  if (!r.ok) throw new Error(`Backlinks API ${r.status}`);
+  return r.json();
+}
+
+// ── Process backlinks into scored objects ──
+function processBacklinks(items) {
+  return items.map(item => {
+    const domain = extractDomain(item.url_from || '');
+    const dr = item.domain_from_rank || 0;
+    const traffic = item.domain_from_main_domain_info?.main_domain_rank || 0; // use rank as proxy
+    const isDofollow = !item.is_lost && item.dofollow !== false;
+    const anchor = item.anchor || '';
+    const title = item.page_from_title || '';
+    const url = item.url_from || '';
+    const rel = scoreRelevance(domain, url, anchor, title);
+    const linkPower = calculateLinkPower(dr, traffic, isDofollow, rel.score);
+    return {
+      domain, url, anchor, title, dr, traffic,
+      isDofollow, relevance: rel.score, relevanceReason: rel.reason,
+      linkPower, tld: item.tld_from || '',
+    };
+  }).sort((a, b) => b.linkPower - a.linkPower);
+}
+
+// ── LINK VALUE ASSESSOR ──
+async function runAssess() {
+  const domainInput = document.getElementById('assess-domain').value.trim();
+  const priceInput = document.getElementById('assess-price').value;
+  if (!domainInput) return;
+
+  const btn = document.getElementById('assess-btn');
+  btn.disabled = true;
+  btn.textContent = 'Loading...';
+
+  const resultDiv = document.getElementById('assess-result');
+  resultDiv.className = 'assess-result';
+  resultDiv.innerHTML = '<div class="loading-msg"><span class="spinner"></span> Fetching data from DataForSEO...</div>';
+
+  try {
+    const target = ensureProtocol(domainInput).replace(/^https?:\/\//, '');
+    const [summary, backlinks] = await Promise.all([
+      fetchSummary(target),
+      fetchBacklinks(target, 5),
+    ]);
+
+    const domain = extractDomain(domainInput);
+    const dr = summary?.rank || 0;
+    const refDomains = summary?.referring_main_domains || 0;
+    const totalBacklinks = summary?.backlinks || 0;
+
+    // Get top backlink for analysis
+    const topLink = backlinks[0] || {};
+    const rel = scoreRelevance(domain, domainInput, '', topLink.page_from_title || '');
+    const linkPower = calculateLinkPower(dr, refDomains, true, rel.score);
+
+    // Verdict
+    let verdict, verdictClass;
+    if (linkPower >= 60 && rel.score >= 70) { verdict = 'Strong Buy'; verdictClass = 'strong-buy'; }
+    else if (linkPower >= 35 || (dr >= 50 && rel.score >= 40)) { verdict = 'Fair Price'; verdictClass = 'fair'; }
+    else if (linkPower >= 15) { verdict = 'Overpriced'; verdictClass = 'overpriced'; }
+    else { verdict = 'Avoid'; verdictClass = 'avoid'; }
+
+    let priceHtml = '';
+    const price = parseFloat(priceInput);
+    if (price > 0 && linkPower > 0) {
+      const costPerPoint = price / linkPower;
+      let priceVerdict, priceColor;
+      if (costPerPoint < 8) { priceVerdict = 'Good value'; priceColor = '#155724'; }
+      else if (costPerPoint <= 15) { priceVerdict = 'Acceptable'; priceColor = '#856404'; }
+      else { priceVerdict = 'Expensive'; priceColor = '#a44a00'; }
+      priceHtml = `
+        <div class="assess-item">
+          <div class="val" style="color:${priceColor};">€${costPerPoint.toFixed(1)}</div>
+          <div class="lbl">Cost per LP Point</div>
+        </div>
+        <div class="assess-item">
+          <div class="val" style="font-size:16px;color:${priceColor};">${priceVerdict}</div>
+          <div class="lbl">Price Assessment</div>
+        </div>`;
+    }
+
+    resultDiv.innerHTML = `
+      <div class="assess-grid">
+        <div class="assess-item"><div class="val">${dr}</div><div class="lbl">Domain Rating</div></div>
+        <div class="assess-item"><div class="val">${fmtNum(refDomains)}</div><div class="lbl">Ref. Domains</div></div>
+        <div class="assess-item"><div class="val">${rel.score}</div><div class="lbl">Relevance</div></div>
+        <div class="assess-item"><div class="val" style="color:#e60000;">${linkPower}</div><div class="lbl">Link Power</div></div>
+        ${priceHtml}
+      </div>
+      <div style="text-align:center;">
+        <div class="verdict ${verdictClass}">${verdict}</div>
+        <div style="font-size:11px;color:#888;margin-top:6px;">Relevance keywords: ${rel.reason}</div>
+      </div>`;
+  } catch (err) {
+    resultDiv.innerHTML = `<div style="color:#c00;padding:12px;">Error: ${err.message}</div>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Assess';
+  }
+}
+
+// ── PAGE COMPARISON ──
+let comparisonData = null;
+let gapSortCol = 'linkPower', gapSortDir = -1;
+let sharedSortCol = 'linkPower', sharedSortDir = -1;
+let fullSortCol = 'linkPower', fullSortDir = -1;
+let activeTab = 'lft';
+
+async function runCompare() {
+  const lftUrl = document.getElementById('lft-url').value.trim();
+  const compUrl = document.getElementById('comp-url').value.trim();
+  if (!lftUrl || !compUrl) return;
+
+  const btn = document.getElementById('compare-btn');
+  btn.disabled = true;
+  btn.textContent = 'Loading...';
+
+  const resultsDiv = document.getElementById('results');
+  resultsDiv.classList.remove('hidden');
+  document.getElementById('kpi-lft').innerHTML = '<div class="loading-msg"><span class="spinner"></span></div>';
+  document.getElementById('kpi-comp').innerHTML = '<div class="loading-msg"><span class="spinner"></span></div>';
+  document.getElementById('dr-chart').innerHTML = '<div class="loading-msg"><span class="spinner"></span> Loading...</div>';
+  document.getElementById('gap-table').innerHTML = '';
+  document.getElementById('shared-table').innerHTML = '';
+  document.getElementById('full-table').innerHTML = '';
+
+  try {
+    const lftTarget = ensureProtocol(lftUrl).replace(/^https?:\/\//, '');
+    const compTarget = ensureProtocol(compUrl).replace(/^https?:\/\//, '');
+
+    const [lftSummary, compSummary, lftBacklinksRaw, compBacklinksRaw] = await Promise.all([
+      fetchSummary(lftTarget),
+      fetchSummary(compTarget),
+      fetchBacklinks(lftTarget, 1000),
+      fetchBacklinks(compTarget, 1000),
+    ]);
+
+    const lftBacklinks = processBacklinks(lftBacklinksRaw);
+    const compBacklinks = processBacklinks(compBacklinksRaw);
+
+    // Build domain maps
+    const lftDomains = new Map();
+    lftBacklinks.forEach(b => { if (!lftDomains.has(b.domain)) lftDomains.set(b.domain, b); });
+    const compDomains = new Map();
+    compBacklinks.forEach(b => { if (!compDomains.has(b.domain)) compDomains.set(b.domain, b); });
+
+    // Gap / Shared / Unique
+    const gap = [], shared = [], lftOnly = [];
+    compDomains.forEach((b, d) => {
+      if (!lftDomains.has(d)) gap.push(b);
+      else shared.push({ comp: b, lft: lftDomains.get(d) });
+    });
+    lftDomains.forEach((b, d) => { if (!compDomains.has(d)) lftOnly.push(b); });
+
+    comparisonData = {
+      lftSummary, compSummary, lftBacklinks, compBacklinks,
+      gap, shared, lftOnly,
+    };
+
+    renderKPIs();
+    renderDRChart();
+    renderGapTable();
+    renderSharedTable();
+    renderFullTable();
+  } catch (err) {
+    document.getElementById('kpi-lft').innerHTML = `<div style="color:#c00;">Error: ${err.message}</div>`;
+    document.getElementById('kpi-comp').innerHTML = '';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Compare';
+  }
+}
+
+function fmtNum(n) {
+  if (n == null) return '—';
+  if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+  if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
+  return n.toLocaleString();
+}
+
+function renderKPIs() {
+  const d = comparisonData;
+  const renderSide = (summary, backlinks, el) => {
+    const avgDR = backlinks.length > 0 ? Math.round(backlinks.reduce((s, b) => s + b.dr, 0) / backlinks.length) : 0;
+    const avgRel = backlinks.length > 0 ? Math.round(backlinks.reduce((s, b) => s + b.relevance, 0) / backlinks.length) : 0;
+    const avgLP = backlinks.length > 0 ? Math.round(backlinks.reduce((s, b) => s + b.linkPower, 0) / backlinks.length) : 0;
+    const dofollow = backlinks.filter(b => b.isDofollow).length;
+    el.innerHTML = `
+      <div class="kpi"><div class="value">${fmtNum(summary?.backlinks || 0)}</div><div class="label">Total Backlinks</div></div>
+      <div class="kpi"><div class="value">${fmtNum(summary?.referring_main_domains || 0)}</div><div class="label">Ref. Domains</div></div>
+      <div class="kpi"><div class="value">${summary?.rank || 0}</div><div class="label">Rank</div></div>
+      <div class="kpi"><div class="value">${avgDR}</div><div class="label">Avg DR</div></div>
+      <div class="kpi highlight"><div class="value">${avgLP}</div><div class="label">Avg Link Power</div></div>
+      <div class="kpi"><div class="value">${avgRel}</div><div class="label">Avg Relevance</div></div>
+      <div class="kpi"><div class="value">${backlinks.length > 0 ? Math.round(dofollow / backlinks.length * 100) : 0}%</div><div class="label">DoFollow</div></div>
+      <div class="kpi"><div class="value">${backlinks.length}</div><div class="label">Sampled</div></div>
+    `;
+  };
+  renderSide(d.lftSummary, d.lftBacklinks, document.getElementById('kpi-lft'));
+  renderSide(d.compSummary, d.compBacklinks, document.getElementById('kpi-comp'));
+}
+
+function renderDRChart() {
+  const buckets = ['0-20', '20-40', '40-60', '60-80', '80-100'];
+  const ranges = [[0,20],[20,40],[40,60],[60,80],[80,100]];
+  const d = comparisonData;
+
+  const count = (bl, lo, hi) => bl.filter(b => b.dr >= lo && b.dr < (hi === 100 ? 101 : hi)).length;
+  const lftCounts = ranges.map(([lo,hi]) => count(d.lftBacklinks, lo, hi));
+  const compCounts = ranges.map(([lo,hi]) => count(d.compBacklinks, lo, hi));
+  const maxVal = Math.max(...lftCounts, ...compCounts, 1);
+
+  let html = '';
+  for (let i = 0; i < 5; i++) {
+    const lh = Math.max(2, (lftCounts[i] / maxVal) * 170);
+    const ch = Math.max(2, (compCounts[i] / maxVal) * 170);
+    html += `
+      <div class="dr-bucket">
+        <div class="dr-bars">
+          <div class="dr-bar lft" style="height:${lh}px;" title="LFT: ${lftCounts[i]}">
+            <div class="dr-bar-label" style="position:absolute;top:-18px;width:100%;text-align:center;font-size:10px;color:#e60000;">${lftCounts[i]}</div>
+          </div>
+          <div class="dr-bar comp" style="height:${ch}px;" title="Comp: ${compCounts[i]}">
+            <div class="dr-bar-label" style="position:absolute;top:-18px;width:100%;text-align:center;font-size:10px;color:#2563eb;">${compCounts[i]}</div>
+          </div>
+        </div>
+        <div class="dr-bucket-label">${buckets[i]}</div>
+      </div>`;
+  }
+  document.getElementById('dr-chart').innerHTML = html;
+}
+
+function relClass(score) {
+  if (score >= 70) return 'relevance-high';
+  if (score >= 40) return 'relevance-med';
+  return 'relevance-low';
+}
+
+function sortableHeader(label, col, currentCol, currentDir, onClickFn) {
+  const arrow = col === currentCol ? (currentDir === 1 ? ' ▲' : ' ▼') : '';
+  return `<th onclick="${onClickFn}('${col}')">${label}<span class="sort-arrow">${arrow}</span></th>`;
+}
+
+// ── Gap Table ──
+function renderGapTable() {
+  if (!comparisonData) return;
+  let data = [...comparisonData.gap];
+
+  // Filters
+  const domainFilter = document.getElementById('gap-filter-domain').value.toLowerCase();
+  const drFilter = parseInt(document.getElementById('gap-filter-dr').value) || 0;
+  const relFilter = parseInt(document.getElementById('gap-filter-rel').value) || 0;
+  const dfFilter = document.getElementById('gap-filter-dofollow').value;
+
+  data = data.filter(b =>
+    b.domain.includes(domainFilter) &&
+    b.dr >= drFilter &&
+    b.relevance >= relFilter &&
+    (dfFilter === 'all' || (dfFilter === 'dofollow' && b.isDofollow) || (dfFilter === 'nofollow' && !b.isDofollow))
+  );
+
+  // Sort
+  data.sort((a, b) => {
+    const av = a[gapSortCol], bv = b[gapSortCol];
+    if (typeof av === 'string') return av.localeCompare(bv) * gapSortDir;
+    return ((av || 0) - (bv || 0)) * gapSortDir;
+  });
+
+  document.getElementById('gap-count').textContent = `${data.length} domains`;
+
+  const top = data.slice(0, 500);
+  let html = `<thead><tr>
+    ${sortableHeader('#', '_idx', gapSortCol, gapSortDir, 'sortGap')}
+    ${sortableHeader('Domain', 'domain', gapSortCol, gapSortDir, 'sortGap')}
+    ${sortableHeader('DR', 'dr', gapSortCol, gapSortDir, 'sortGap')}
+    ${sortableHeader('Relevance', 'relevance', gapSortCol, gapSortDir, 'sortGap')}
+    ${sortableHeader('Link Power', 'linkPower', gapSortCol, gapSortDir, 'sortGap')}
+    ${sortableHeader('DoFollow', 'isDofollow', gapSortCol, gapSortDir, 'sortGap')}
+    <th>Anchor</th>
+    <th>Keywords</th>
+  </tr></thead><tbody>`;
+
+  top.forEach((b, i) => {
+    html += `<tr>
+      <td>${i + 1}</td>
+      <td><a href="https://${b.domain}" target="_blank" style="color:#2563eb;text-decoration:none;">${b.domain}</a></td>
+      <td>${b.dr}</td>
+      <td class="${relClass(b.relevance)}">${b.relevance}</td>
+      <td style="font-weight:600;">${b.linkPower}</td>
+      <td>${b.isDofollow ? '✓' : '—'}</td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(b.anchor)}">${esc(b.anchor)}</td>
+      <td style="font-size:11px;color:#888;">${esc(b.relevanceReason)}</td>
+    </tr>`;
+  });
+  html += '</tbody>';
+  document.getElementById('gap-table').innerHTML = html;
+}
+
+function sortGap(col) {
+  if (gapSortCol === col) gapSortDir *= -1;
+  else { gapSortCol = col; gapSortDir = -1; }
+  renderGapTable();
+}
+
+// ── Shared Table ──
+function renderSharedTable() {
+  if (!comparisonData) return;
+  let data = [...comparisonData.shared];
+  const domainFilter = document.getElementById('shared-filter-domain').value.toLowerCase();
+  data = data.filter(s => s.comp.domain.includes(domainFilter));
+
+  data.sort((a, b) => {
+    const av = a.comp[sharedSortCol], bv = b.comp[sharedSortCol];
+    if (typeof av === 'string') return av.localeCompare(bv) * sharedSortDir;
+    return ((av || 0) - (bv || 0)) * sharedSortDir;
+  });
+
+  const top = data.slice(0, 200);
+  let html = `<thead><tr>
+    ${sortableHeader('#', '_idx', sharedSortCol, sharedSortDir, 'sortShared')}
+    ${sortableHeader('Domain', 'domain', sharedSortCol, sharedSortDir, 'sortShared')}
+    ${sortableHeader('DR', 'dr', sharedSortCol, sharedSortDir, 'sortShared')}
+    ${sortableHeader('Comp LP', 'linkPower', sharedSortCol, sharedSortDir, 'sortShared')}
+    ${sortableHeader('Relevance', 'relevance', sharedSortCol, sharedSortDir, 'sortShared')}
+    <th>LFT Anchor</th>
+    <th>Comp Anchor</th>
+  </tr></thead><tbody>`;
+
+  top.forEach((s, i) => {
+    html += `<tr>
+      <td>${i + 1}</td>
+      <td><a href="https://${s.comp.domain}" target="_blank" style="color:#2563eb;text-decoration:none;">${s.comp.domain}</a></td>
+      <td>${s.comp.dr}</td>
+      <td style="font-weight:600;">${s.comp.linkPower}</td>
+      <td class="${relClass(s.comp.relevance)}">${s.comp.relevance}</td>
+      <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(s.lft.anchor)}">${esc(s.lft.anchor)}</td>
+      <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(s.comp.anchor)}">${esc(s.comp.anchor)}</td>
+    </tr>`;
+  });
+  html += '</tbody>';
+  document.getElementById('shared-table').innerHTML = html;
+}
+
+function sortShared(col) {
+  if (sharedSortCol === col) sharedSortDir *= -1;
+  else { sharedSortCol = col; sharedSortDir = -1; }
+  renderSharedTable();
+}
+
+// ── Full Table ──
+function switchTab(tab) {
+  activeTab = tab;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab')[tab === 'lft' ? 0 : 1].classList.add('active');
+  renderFullTable();
+}
+
+function renderFullTable() {
+  if (!comparisonData) return;
+  const data = activeTab === 'lft' ? [...comparisonData.lftBacklinks] : [...comparisonData.compBacklinks];
+  const domainFilter = document.getElementById('full-filter-domain').value.toLowerCase();
+  let filtered = data.filter(b => b.domain.includes(domainFilter));
+
+  filtered.sort((a, b) => {
+    const av = a[fullSortCol], bv = b[fullSortCol];
+    if (typeof av === 'string') return av.localeCompare(bv) * fullSortDir;
+    return ((av || 0) - (bv || 0)) * fullSortDir;
+  });
+
+  const top = filtered.slice(0, 500);
+  let html = `<thead><tr>
+    ${sortableHeader('#', '_idx', fullSortCol, fullSortDir, 'sortFull')}
+    ${sortableHeader('Domain', 'domain', fullSortCol, fullSortDir, 'sortFull')}
+    ${sortableHeader('DR', 'dr', fullSortCol, fullSortDir, 'sortFull')}
+    ${sortableHeader('Relevance', 'relevance', fullSortCol, fullSortDir, 'sortFull')}
+    ${sortableHeader('Link Power', 'linkPower', fullSortCol, fullSortDir, 'sortFull')}
+    ${sortableHeader('DoFollow', 'isDofollow', fullSortCol, fullSortDir, 'sortFull')}
+    <th>Anchor</th>
+    <th>URL</th>
+  </tr></thead><tbody>`;
+
+  top.forEach((b, i) => {
+    html += `<tr>
+      <td>${i + 1}</td>
+      <td><a href="https://${b.domain}" target="_blank" style="color:#2563eb;text-decoration:none;">${b.domain}</a></td>
+      <td>${b.dr}</td>
+      <td class="${relClass(b.relevance)}">${b.relevance}</td>
+      <td style="font-weight:600;">${b.linkPower}</td>
+      <td>${b.isDofollow ? '✓' : '—'}</td>
+      <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(b.anchor)}">${esc(b.anchor)}</td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><a href="${esc(b.url)}" target="_blank" style="color:#888;font-size:11px;">${esc(b.url)}</a></td>
+    </tr>`;
+  });
+  html += '</tbody>';
+  document.getElementById('full-table').innerHTML = html;
+}
+
+function sortFull(col) {
+  if (fullSortCol === col) fullSortDir *= -1;
+  else { fullSortCol = col; fullSortDir = -1; }
+  renderFullTable();
+}
+
+function esc(s) {
+  if (!s) return '';
+  const el = document.createElement('span');
+  el.textContent = s;
+  return el.innerHTML;
+}
+</script>
+</body>
+</html>
